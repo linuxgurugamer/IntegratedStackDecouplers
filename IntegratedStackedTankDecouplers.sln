@@ -1,0 +1,35 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26730.8
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntegratedStackDecouplers", "Source\IntegratedStackDecouplers.csproj", "{DCA9423C-16DD-4172-9813-61A40AD159BB}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionItems", "{34A9D9B5-4B4D-4803-B8FE-949AACB0DABA}"
+	ProjectSection(SolutionItems) = preProject
+		buildRelease.bat = buildRelease.bat
+		deploy.bat = deploy.bat
+		GameData\IntegratedStackedTankDecouplers\MMpatches\IntegratedStackDecouplers.cfg = GameData\IntegratedStackedTankDecouplers\MMpatches\IntegratedStackDecouplers.cfg
+		IntegratedStackDecouplers.version = IntegratedStackDecouplers.version
+		License.txt = License.txt
+		README.md = README.md
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DCA9423C-16DD-4172-9813-61A40AD159BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DCA9423C-16DD-4172-9813-61A40AD159BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DCA9423C-16DD-4172-9813-61A40AD159BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DCA9423C-16DD-4172-9813-61A40AD159BB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {889455E4-F8A4-4DFD-AD87-219B6AFBC928}
+	EndGlobalSection
+EndGlobal
