@@ -16,8 +16,8 @@ namespace IntegratedStackedTankDecouplers
         [KSPEvent(name= "integratedDecoupler", guiName = "No decoupler", guiActiveEditor = true, active = true)]
         public void ToggleIntegratedDecoupler()
         {
-            integratedDecoupler = !integratedDecoupler;
-            SetStatus();           
+            //integratedDecoupler = !integratedDecoupler;
+            SetStatus(!integratedDecoupler);           
         }
 
 //        [KSPField(guiName = "Seperatron Count", isPersistant = true, guiActiveEditor = true),
@@ -37,8 +37,9 @@ namespace IntegratedStackedTankDecouplers
         NodeControl newNodes;
 
 
-        void SetStatus()
+        void SetStatus(bool b)
         {
+            integratedDecoupler = b;
             if (integratedDecoupler)
             {
                 enableDecoupler();
@@ -54,7 +55,9 @@ namespace IntegratedStackedTankDecouplers
             crossfeedToggleModule.Actions["DisableAction"].active = false;
 
             if (decouplerModule != null)
-               part.UpdateStageability(true, true);
+                part.UpdateStageability(true, true);
+            else
+                Log.Error("No ModuleDecouple to update");
             
             GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
         }
@@ -65,6 +68,7 @@ namespace IntegratedStackedTankDecouplers
             base.enabled = true;
             if (decouplerModule != null)
             {
+                //decouplerModule.OnStart(PartModule.StartState.Editor);
                 decouplerModule.SetStaging(true);
                 decouplerModule.Events["ToggleStaging"].guiActiveEditor = true;
                 decouplerModule.Fields["ejectionForcePercent"].guiActiveEditor = true;
@@ -84,11 +88,15 @@ namespace IntegratedStackedTankDecouplers
 
             if (decouplerModule != null)
             {
+                //part.stagingIcon = string.Empty;
                 decouplerModule.SetStaging(false);
                 decouplerModule.Events["ToggleStaging"].guiActiveEditor = false;
                 decouplerModule.Fields["ejectionForcePercent"].guiActiveEditor = false;
 
                 stagingEnabled = false;
+
+                foreach (PartModule m in part.Modules)
+                    m.SetStaging(false);
 
                 crossfeedToggleModule.EnableAction(kap);
             }
@@ -101,14 +109,16 @@ namespace IntegratedStackedTankDecouplers
         PartModule decouplerPartModule = null;
         ModuleToggleCrossfeed crossfeedToggleModule = null;
 
-        bool techAvailable { get
-        {
-                var b = true;
-                if (this.DecouplerRequiresTech())
-                    b = this.DecouplerHasTech();
-                return b;
+        bool techAvailable {
+            get
+            {
+                    var b = true;
+                    if (this.DecouplerRequiresTech())
+                        b = this.DecouplerHasTech();
+                    return b;
+                }
             }
-        }
+
         public override void OnStart(StartState state)
         {
             Log.Info("IntegratedDecoupler.OnStart");
@@ -127,21 +137,21 @@ namespace IntegratedStackedTankDecouplers
             else
                 Log.Info("ModuleDecouple found");
 
-            if (!techAvailable || moduleJettison != null)
+            if (!techAvailable) // || moduleJettison != null
             {
                 this.Events["ToggleIntegratedDecoupler"].guiActiveEditor = false;
                 // this.Fields["seperatronCnt"].guiActiveEditor = false;
                 Log.Info("Disabling IntegratedDecoupler due to no tech");
-                disableDecoupler();
-                if (decouplerModule != null)
-                    part.UpdateStageability(true, true);
+                
+                SetStatus(false);
+
 
                 //GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
                 return;
             }
 
-            SetStatus();
-            GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
+            SetStatus(integratedDecoupler);
+            //GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
             EditorLogic.fetch.SetBackup();
             oldSepCnt = seperatronCnt;
             GameEvents.onEditorShipModified.Add(onEditorShipModified);

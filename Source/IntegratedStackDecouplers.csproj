@@ -36,7 +36,7 @@
       <DependentUpon>AssemblyVersion.tt</DependentUpon>
     </Compile>
     <Compile Include="NodeControl.cs" />
-    <Compile Include="IntegratedDecouplers.cs" />
+    <Compile Include="IntegratedDecoupler.cs" />
     <Compile Include="Log.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
