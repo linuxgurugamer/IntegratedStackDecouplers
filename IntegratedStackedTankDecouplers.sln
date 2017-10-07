@@ -8,6 +8,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionItems", "{34A9D9B5-4B4D-4803-B8FE-949AACB0DABA}"
 	ProjectSection(SolutionItems) = preProject
 		buildRelease.bat = buildRelease.bat
+		GameData\IntegratedStackDecouplers\MMpatches\CyrogenicTanks.cfg = GameData\IntegratedStackDecouplers\MMpatches\CyrogenicTanks.cfg
 		deploy.bat = deploy.bat
 		GameData\IntegratedStackDecouplers\MMpatches\IntegratedStackDecouplers.cfg = GameData\IntegratedStackDecouplers\MMpatches\IntegratedStackDecouplers.cfg
 		IntegratedStackDecouplers.version = IntegratedStackDecouplers.version
