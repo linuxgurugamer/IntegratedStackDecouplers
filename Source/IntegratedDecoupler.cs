@@ -10,6 +10,15 @@ namespace IntegratedStackedTankDecouplers
 {
     public class IntegratedDecoupler : ModuleToggleCrossfeed, IPartMassModifier, IPartCostModifier
     {
+        static int cnt = 0;
+
+#if DEBUG
+        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true)]
+#endif
+        int lcnt = -1;
+
+        List<IntegratedDecoupler> toInitialize = new List<IntegratedDecoupler>();
+
         [KSPField(isPersistant = true, guiActiveEditor = false, guiActive = false)]
         public bool integratedDecoupler = false;
 
@@ -17,12 +26,12 @@ namespace IntegratedStackedTankDecouplers
         public void ToggleIntegratedDecoupler()
         {
             Log.Info("ToggleIntegratedDecoupler");
-            SetStatus(!integratedDecoupler);
+            SetAllStatus(!integratedDecoupler);
         }
 
         //        [KSPField(guiName = "Seperatron Count", isPersistant = true, guiActiveEditor = true),
         //            UI_FloatRange(stepIncrement = 1f, maxValue = 100f, minValue = 0f)]
-       // public float seperatronCnt = 0;
+        // public float seperatronCnt = 0;
         //float oldSepCnt;
 
         [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = false)]
@@ -39,18 +48,43 @@ namespace IntegratedStackedTankDecouplers
         AttachNode topNode02 = null;
 
         Part lastTopNodeAttachedPart = null;
+        BaseEventList pmEvents;
 
-        void SetStatus(bool b, bool inEditorModified = false)
+        void SetStatus(bool b, IntegratedDecoupler symIntegratedDecoupler)
         {
-            integratedDecoupler = b;
+            Part counterpart = symIntegratedDecoupler.part;
+
+            ModuleToggleCrossfeed symCrossfeedToggleModule = counterpart.FindModuleImplementing<ModuleToggleCrossfeed>();
+
+            symIntegratedDecoupler.integratedDecoupler = b;
             if (integratedDecoupler)
-            {
-                enableDecoupler();
-            }
+                enableDecoupler(symIntegratedDecoupler, symCrossfeedToggleModule);
             else
-            {
-                disableDecoupler();
+                disableDecoupler(symIntegratedDecoupler, symCrossfeedToggleModule);
+
+            SetEvents(symIntegratedDecoupler.decouplerModule, symCrossfeedToggleModule);
+        }
+
+        void SetAllStatus(bool b, bool inEditorModified = false, bool doSymmetry = true)
+        {
+            //integratedDecoupler = b;
+            Log.Info("lcnt: " + lcnt + ",   SetStatus: " + b);
+            
+            for (int i = 0; i < toInitialize.Count; i++)
+            { 
+                IntegratedDecoupler symIntegratedDecoupler = toInitialize[i];
+                SetStatus(b, symIntegratedDecoupler);     
             }
+            
+
+            Log.Info("SetStatus 1");
+            if (!inEditorModified)
+                GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
+            Log.Info("SetStatus 1");
+        }
+
+        void SetEvents(ModuleDecouple decouplerModule, ModuleToggleCrossfeed crossfeedToggleModule)
+        {
             crossfeedToggleModule.Events["ToggleEvent"].guiActive = false;
             crossfeedToggleModule.Events["ToggleEvent"].active = false;
             crossfeedToggleModule.Actions["ToggleAction"].active = false;
@@ -58,56 +92,61 @@ namespace IntegratedStackedTankDecouplers
             crossfeedToggleModule.Actions["DisableAction"].active = false;
 
             if (decouplerModule != null)
-                part.UpdateStageability(true, true);
+                decouplerModule.part.UpdateStageability(true, true);
             else
                 Log.Error("No ModuleDecouple to update");
 
-            if (!inEditorModified)
-                GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
         }
-
-        void enableDecoupler()
+        void enableDecoupler(IntegratedDecoupler id, ModuleToggleCrossfeed crossfeedToggleModule)
         {
-            Log.Info("enableDecoupler");
+            Log.Info("lcnt: " + lcnt +  "  enableDecoupler");
             KSPActionParam kap = null;
             base.enabled = true;
-            if (decouplerModule != null)
+            if (id.decouplerModule != null)
             {
-                decouplerModule.SetStaging(true);
-                decouplerModule.Events["ToggleStaging"].guiActiveEditor = true; // Only seen when AdvancedTweakables is enabled
-                decouplerModule.Fields["ejectionForcePercent"].guiActiveEditor = true;
-                decouplerModule.enabled = true;
-                stagingEnabled = true;
-                crossfeedToggleModule.DisableAction(kap);
+                id.decouplerModule.SetStaging(true);
+                id.decouplerModule.Events["ToggleStaging"].guiActiveEditor = true; // Only seen when AdvancedTweakables is enabled
+                id.decouplerModule.Fields["ejectionForcePercent"].guiActiveEditor = true;
+                id.decouplerModule.enabled = true;
+                id.decouplerModule.stagingEnabled = true;
+                if (crossfeedToggleModule != null)
+                    crossfeedToggleModule.DisableAction(kap);
+
+                // if (decouplerModule.part != null)
+                id.pmEvents["ToggleIntegratedDecoupler"].guiName = "Integrated Decoupler";
             }
-
-            Events["ToggleIntegratedDecoupler"].guiName = "Integrated Decoupler";
-
         }
-        void disableDecoupler()
+
+        void disableDecoupler(IntegratedDecoupler id, ModuleToggleCrossfeed crossfeedToggleModule)
         {
-            Log.Info("disableDecoupler");
+            Log.Info("lcnt: " + lcnt + "  disableDecoupler");
             KSPActionParam kap = null;
 
-            if (decouplerModule != null)
+            if (id.decouplerModule != null)
             {
-                decouplerModule.SetStaging(false);
-                decouplerModule.Events["ToggleStaging"].guiActiveEditor = false;
-                decouplerModule.Fields["ejectionForcePercent"].guiActiveEditor = false;
-                decouplerModule.enabled = false;
-                stagingEnabled = false;
+                id.decouplerModule.SetStaging(false);
+                id.decouplerModule.Events["ToggleStaging"].guiActiveEditor = false; // Only seen when AdvancedTweakables is enabled
+                id.decouplerModule.Fields["ejectionForcePercent"].guiActiveEditor = false;
+                id.decouplerModule.enabled = false;
+                id.decouplerModule.stagingEnabled = false;
 
-                foreach (PartModule m in part.Modules)
-                {
-                    m.SetStaging(false);
-                    m.Events["ToggleStaging"].guiActiveEditor = false;
-                }
+                if (part != null && part.Modules != null)
+                    foreach (PartModule m in part.Modules)
+                    {
+                        if (!ReferenceEquals(m, id.decouplerModule))
+                        {
+                            m.SetStaging(false);
+                            m.Events["ToggleStaging"].guiActiveEditor = false;
+                        }
+                    }
 
-                crossfeedToggleModule.EnableAction(kap);
+                if (crossfeedToggleModule != null)
+                    crossfeedToggleModule.EnableAction(kap);
+
+                //if (decouplerModule.part != null  && decouplerModule.part.Events != null)
+                id.pmEvents["ToggleIntegratedDecoupler"].guiName = "No decoupler";
+
             }
-            base.enabled = false;
-            Events["ToggleIntegratedDecoupler"].guiName = "No decoupler";
-
         }
 
         ModuleDecouple decouplerModule = null;
@@ -145,35 +184,9 @@ namespace IntegratedStackedTankDecouplers
             base.OnStart(state);
             //topNodeChecked = false;
 
-            decouplerModule = this.part.FindModuleImplementing<ModuleDecouple>();
-            decouplerPartModule = decouplerModule;
+            lcnt = ++cnt;
 
-            crossfeedToggleModule = this.part.FindModuleImplementing<ModuleToggleCrossfeed>();
-
-            ModuleJettison moduleJettison = this.part.FindModuleImplementing<ModuleJettison>();
-
-            if (decouplerModule == null)
-                Log.Info("ModuleDecouple NOT found");
-            else
-                Log.Info("ModuleDecouple found");
-
-            if (!techAvailable) // || moduleJettison != null
-            {
-                this.Events["ToggleIntegratedDecoupler"].guiActiveEditor = false;
-                // this.Fields["seperatronCnt"].guiActiveEditor = false;
-                Log.Info("Disabling IntegratedDecoupler due to no tech");
-
-                SetStatus(false);
-
-
-                //GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
-                return;
-            }
-
-
-            SetStatus(integratedDecoupler);
-
-            EditorLogic.fetch.SetBackup();
+  
 
             topNode = GetNode("top", part);
             if (topNode == null)
@@ -184,62 +197,144 @@ namespace IntegratedStackedTankDecouplers
             }
 
             GameEvents.onEditorShipModified.Add(onEditorShipModified);
+            GameEvents.onEditorPartPlaced.Add(onEditorPartPlaced);
 
         }
 
-        bool isOnEditorShipModified = false;
+       // bool isOnEditorShipModified = false;
 
-
-        void onEditorShipModified(ShipConstruct s)
+        private void onEditorPartPlaced(Part part)
         {
-            Log.Info("onEditorShipModified 1");
-            if (isOnEditorShipModified)
-                return;
-            isOnEditorShipModified = true;
+            if (part == null || part != this.part) return;
+            Log.Info("onEditorPartPlaced, lcnt: " + lcnt);
 
-            Log.Info("onEditorShipModified 2");
+            decouplerModule = this.part.FindModuleImplementing<ModuleDecouple>();
+            decouplerPartModule = decouplerModule;
 
-            if (topNode != null || topNode01 != null || topNode02 != null)
+            crossfeedToggleModule = this.part.FindModuleImplementing<ModuleToggleCrossfeed>();
+
+            ModuleJettison moduleJettison = this.part.FindModuleImplementing<ModuleJettison>();
+            pmEvents = Events;
+
+            if (decouplerModule == null)
+                Log.Info("ModuleDecouple NOT found");
+            else
+                Log.Info("ModuleDecouple found");
+
+            // Collect a list of modules to initialize from the part and all its children.
+            toInitialize.Clear();
+            toInitialize.Add(this);
+            CollectToInitializerList(part, toInitialize);
+
+            // Also any symmetry counterparts it may have, and *their* children.
+            if (part.symmetryCounterparts != null)
             {
-                Log.Info("top attach node found");
-                Part attachedPart = null;
-                if (topNode != null && topNode.attachedPart != null)
+                for (int i = 0; i < part.symmetryCounterparts.Count; ++i)
                 {
-                    Log.Info("part attached to node: " + topNode.attachedPart.partInfo.name);
-                    attachedPart = topNode.attachedPart;
-                }
-                else
-                {
-                    if (topNode01 != null && topNode01.attachedPart != null)
+                    Part counterpart = part.symmetryCounterparts[i];
+                    if (!ReferenceEquals(this, counterpart)) // probably unnecessary
                     {
-                        Log.Info("part attached to node01: " + topNode01.attachedPart.partInfo.name);
-                        attachedPart = topNode01.attachedPart;
-                    }
-                    if (topNode02 != null && topNode02.attachedPart != null)
-                    {
-                        Log.Info("part attached to node: " + topNode.attachedPart.partInfo.name);
-                        attachedPart = topNode02.attachedPart;
+                        CollectToInitializerList(counterpart, toInitialize);
                     }
                 }
-                // If attached part is an engine, and it's attached to the bottom node, enable this at start
-                if (attachedPart != null &&
-                    (attachedPart.Modules.Contains("ModuleEngines") || attachedPart.Modules.Contains("ModuleEnginesFX"))) //is part an engine?
-                {
-                    if (lastTopNodeAttachedPart != attachedPart)
-                        SetStatus(true);
+            }
+            Log.Info("onEditorPartPlaced.toInitialize.Count: " + toInitialize.Count);
+            if (!techAvailable) // || moduleJettison != null
+            {
+                this.Events["ToggleIntegratedDecoupler"].guiActiveEditor = false;
+                // this.Fields["seperatronCnt"].guiActiveEditor = false;
+                Log.Info("Disabling IntegratedDecoupler due to no tech");
 
-                    AttachNode bottomNode = null;
+                SetStatus(false, this);
+ 
+                return;
+            }
+            Log.Info("lcnt: " + lcnt + ",  Doing initial SetStatus");
+            SetStatus(false, this);
+            lastTopNodeAttachedPart = null;
+
+            EditorLogic.fetch.SetBackup();
+
+
+            Log.Info("OnEditorPartPlaced, lcnt: " + lcnt + ",  toInitialize.Count: " + toInitialize.Count);
+        }
+
+        /// <summary>
+        /// Scan the provided part and all its children recursively, looking for any of them that have
+        /// a ModuleVesselCategorizer.  Add any found modules to the list.
+        /// </summary>
+        /// <param name="root"></param>
+        /// <param name="toInitialize"></param>
+        private static void CollectToInitializerList(Part root, List<IntegratedDecoupler> toInitialize)
+        {
+            if (root == null) return;
+
+            for (int i = 0; i < root.symmetryCounterparts.Count; ++i)
+            {
+                Part counterpart = root.symmetryCounterparts[i];
+                if (!ReferenceEquals(root, counterpart))
+                {
+                    IntegratedDecoupler symIntegratedDecoupler = counterpart.FindModuleImplementing<IntegratedDecoupler>();
+                    if (!toInitialize.Contains(symIntegratedDecoupler))
+                        toInitialize.Add(symIntegratedDecoupler);
+#if false
+                    if (root.children == null) return;
+                    for (int i1 = 0; i1 < root.children.Count; ++i1)
+                    {
+                        CollectToInitializerList(root.children[i1], toInitialize);
+                    }
+#endif
+                }
+            }
+        }
+
+
+        void CheckIfModified()
+        {
+            Log.Info("lcnt: " + lcnt + ",  CheckIfModified");
+            Part attachedPart = null;
+            if (topNode != null && topNode.attachedPart != null)
+            {
+                Log.Info("lcnt: " + lcnt + " part attached to node: " + topNode.attachedPart.partInfo.name);
+                attachedPart = topNode.attachedPart;
+            }
+            else
+            {
+                if (topNode01 != null && topNode01.attachedPart != null)
+                {
+                    Log.Info("lcnt: " + lcnt + " part attached to node01: " + topNode01.attachedPart.partInfo.name);
+                    attachedPart = topNode01.attachedPart;
+                }
+                if (topNode02 != null && topNode02.attachedPart != null)
+                {
+                    Log.Info("lcnt: " + lcnt + " part attached to node: " + topNode.attachedPart.partInfo.name);
+                    attachedPart = topNode02.attachedPart;
+                }
+            }
+
+            // If attached part is an engine, and it's attached to the bottom node, enable this at start
+            if (attachedPart != null &&
+                (attachedPart.Modules.Contains("ModuleEngines") || attachedPart.Modules.Contains("ModuleEnginesFX"))) //is part an engine?
+            {
+
+                if (lastTopNodeAttachedPart != attachedPart)
+                {
+                    Log.Info("lcnt: " + lcnt + ",   lastTopNodeAttachedPart != attachedPart, setting status true");
+                    SetStatus(true, this);
+                }
+
+                AttachNode bottomNode = null;
 #if ENGINES_W_2_BOTTOMNODES
                     AttachNode bottomNode01 = null;
                     AttachNode bottomNode02 = null;
 #endif
-                    Part bottomNodeAttachedPart = null;
+                Part bottomNodeAttachedPart = null;
 
-                    bottomNode = GetNode("bottom", attachedPart);
-                    if (bottomNode != null)
-                    {
-                        bottomNodeAttachedPart = bottomNode.attachedPart;
-                    }
+                bottomNode = GetNode("bottom", attachedPart);
+                if (bottomNode != null)
+                {
+                    bottomNodeAttachedPart = bottomNode.attachedPart;
+                }
 #if ENGINES_W_2_BOTTOMNODES
                     else
                     { 
@@ -255,32 +350,61 @@ namespace IntegratedStackedTankDecouplers
                     }
 #endif
 
-                    if (part != bottomNodeAttachedPart)
-                    {
-                        ScreenMessages.PostScreenMessage("Top node not attached to bottom node ", 3f, ScreenMessageStyle.UPPER_CENTER);
+                if (part != bottomNodeAttachedPart)
+                {
+                    Log.Info("lcnt: " + lcnt + "   Top node not attached to bottom node of engine");
+                    ScreenMessages.PostScreenMessage(lcnt + "Top node not attached to bottom node of engine", 3f, ScreenMessageStyle.UPPER_CENTER);
 
-                        SetStatus(false, true);
-                        Events["ToggleIntegratedDecoupler"].guiActiveEditor = false;
-                    }
-                    else
-                        Events["ToggleIntegratedDecoupler"].guiActiveEditor = true;
-                    lastTopNodeAttachedPart = attachedPart;
+                    SetStatus(false, this);
+                    Events["ToggleIntegratedDecoupler"].guiActiveEditor = false;
                 }
                 else
                 {
-                    Log.Info("No engine detected attached to top node");
-                    if (attachedPart != null)
-                    {
-                        if (lastTopNodeAttachedPart != null && lastTopNodeAttachedPart != attachedPart)
-                            SetStatus(false);
-                        lastTopNodeAttachedPart = attachedPart;
-                    }
+                    //SetStatus(true, this);
+                    Log.Info("lcnt: " + lcnt + "   Top node is attached to bottom node of engine");
+                    Events["ToggleIntegratedDecoupler"].guiActiveEditor = true;
+                }
+                lastTopNodeAttachedPart = attachedPart;
+            }
+            else
+            {
+                Log.Info("lcnt: " + lcnt + "  No engine detected attached to top node");
+                Events["ToggleIntegratedDecoupler"].guiActiveEditor = true;
+                if (attachedPart != null)
+                {
+                    if (lastTopNodeAttachedPart != null && lastTopNodeAttachedPart != attachedPart)
+                        SetStatus(false, this);
+                    lastTopNodeAttachedPart = attachedPart;
+                }
+            }
+
+        }
+
+        void onEditorShipModified(ShipConstruct s)
+        {
+            //Log.Info("onEditorShipModified 1, lcnt: " + lcnt );
+
+            // if (isOnEditorShipModified)
+            //     return;
+            // isOnEditorShipModified = true;
+            if (toInitialize.Count == 0)
+                return;
+
+
+            Log.Info("onEditorShipModified 2, lcnt: " + lcnt + ",   toInitialize.Count: " + toInitialize.Count);
+
+
+            if (topNode != null || topNode01 != null || topNode02 != null)
+            {
+                Log.Info("top attach node found, lcnt: " + lcnt);
+
+                for (int i = 0; i < toInitialize.Count; i++)
+                {
+                    toInitialize[i].CheckIfModified();
                 }
 
-
-               
             }
-            isOnEditorShipModified = false;
+            //isOnEditorShipModified = false;
         }
 
 
@@ -288,6 +412,7 @@ namespace IntegratedStackedTankDecouplers
         private void OnDestroy()
         {
             GameEvents.onEditorShipModified.Remove(onEditorShipModified);
+            GameEvents.onEditorPartPlaced.Remove(onEditorPartPlaced);
         }
 
         public override string GetInfo()
