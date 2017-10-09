@@ -3,3 +3,6 @@
 
 0.1.1
 	Added symmetry code
+
+0.1.2
+	Compiled for 1.3.1
