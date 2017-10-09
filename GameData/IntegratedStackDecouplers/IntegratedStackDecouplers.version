@@ -1,11 +1,11 @@
 {
-  "NAME": "KaptainsLog",
+  "NAME": "IntegratedStackDecouplers",
   "URL": "https://raw.githubusercontent.com/linuxgurugamer/IntegratedStackDecouplers/master/IntegratedStackDecouplers.version",
   "VERSION": {
     "MAJOR": 0,
     "MINOR": 1,
     "PATCH": 2,
-    "BUILD": 0
+    "BUILD": 1
   },
   "KSP_VERSION": {
     "MAJOR": 1,
