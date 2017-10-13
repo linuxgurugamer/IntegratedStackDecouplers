@@ -8,7 +8,7 @@ using KSP.UI.Screens;
 
 namespace IntegratedStackedTankDecouplers
 {
-    public class IntegratedDecoupler : ModuleToggleCrossfeed, IPartMassModifier, IPartCostModifier
+    public partial class IntegratedDecoupler : ModuleToggleCrossfeed
     {
         static int cnt = 0;
 
@@ -17,7 +17,10 @@ namespace IntegratedStackedTankDecouplers
 #endif
         int lcnt = -1;
 
-        List<IntegratedDecoupler> toInitialize = new List<IntegratedDecoupler>();
+        List<IntegratedDecoupler> partsInSymmetry = new List<IntegratedDecoupler>();
+
+        [KSPField(isPersistant = true, guiActiveEditor = false, guiActive = false)]
+        public bool initialized = false;
 
         [KSPField(isPersistant = true, guiActiveEditor = false, guiActive = false)]
         public bool integratedDecoupler = false;
@@ -25,14 +28,9 @@ namespace IntegratedStackedTankDecouplers
         [KSPEvent(name = "integratedDecoupler", guiName = "No decoupler", guiActiveEditor = true, active = true)]
         public void ToggleIntegratedDecoupler()
         {
-            Log.Info("ToggleIntegratedDecoupler");
+            Log.Info("ToggleIntegratedDecoupler, lcnt: " + lcnt);
             SetAllStatus(!integratedDecoupler);
         }
-
-        //        [KSPField(guiName = "Seperatron Count", isPersistant = true, guiActiveEditor = true),
-        //            UI_FloatRange(stepIncrement = 1f, maxValue = 100f, minValue = 0f)]
-        // public float seperatronCnt = 0;
-        //float oldSepCnt;
 
         [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = false)]
         public float decouplerMass = 0.15f;
@@ -50,19 +48,89 @@ namespace IntegratedStackedTankDecouplers
         Part lastTopNodeAttachedPart = null;
         BaseEventList pmEvents;
 
-        void SetStatus(bool b, IntegratedDecoupler symIntegratedDecoupler)
+
+        ModuleDecouple decouplerModule = null;
+        PartModule decouplerPartModule = null;
+        ModuleToggleCrossfeed crossfeedToggleModule = null;
+
+
+
+
+        public override void OnStart(StartState state)
+        {
+            Log.Info("lcnt: " + lcnt + ",  IntegratedDecoupler.OnStart");
+            base.OnStart(state);
+            //topNodeChecked = false;
+            lcnt = ++cnt;
+
+            topNode = GetNode("top", part);
+            if (topNode == null)
+            {
+                topNode01 = GetNode("top01", part);
+                if (topNode01 != null)
+                    topNode02 = GetNode("top02", part);
+            }
+
+            GameEvents.onEditorShipModified.Add(onEditorShipModified);
+            //GameEvents.onEditorPartPlaced.Add(onEditorPartPlaced);
+            part.OnEditorAttach += new Callback(OnEditorAttach);
+
+            GetReferences();
+            if (!initialized)
+            {
+                initialized = true;
+                decouplerModule.Events["ToggleStaging"].guiActiveEditor = false;
+                decouplerModule.Fields["ejectionForcePercent"].guiActiveEditor = false;
+                if (crossfeedToggleModule != null)
+                {
+                    KSPActionParam kap = null;
+                    crossfeedToggleModule.EnableAction(kap);
+                    SetEvents(false, decouplerModule, crossfeedToggleModule);
+
+                }
+            }
+            else
+            {
+                if (integratedDecoupler)
+                {
+                    pmEvents["ToggleIntegratedDecoupler"].guiName = "Integrated Decoupler";
+                    decouplerModule.Events["ToggleStaging"].guiActiveEditor = true;
+                }
+                else
+                {
+                    decouplerModule.Events["ToggleStaging"].guiActiveEditor = false;
+                    decouplerModule.Fields["ejectionForcePercent"].guiActiveEditor = false;
+                    if (crossfeedToggleModule != null)
+                    {
+                        KSPActionParam kap = null;
+                        crossfeedToggleModule.EnableAction(kap);
+                        SetEvents(false, decouplerModule, crossfeedToggleModule);
+
+                    }
+                }
+            }
+            GetSymList();
+
+        }
+
+        /// <summary>
+        /// Set the decoupler status
+        /// </summary>
+        /// <param name="status"></param>
+        /// <param name="symIntegratedDecoupler"></param>
+        void SetStatus(bool status, IntegratedDecoupler symIntegratedDecoupler)
         {
             Part counterpart = symIntegratedDecoupler.part;
 
             ModuleToggleCrossfeed symCrossfeedToggleModule = counterpart.FindModuleImplementing<ModuleToggleCrossfeed>();
 
-            symIntegratedDecoupler.integratedDecoupler = b;
+            symIntegratedDecoupler.integratedDecoupler = status;
             if (integratedDecoupler)
                 enableDecoupler(symIntegratedDecoupler, symCrossfeedToggleModule);
             else
                 disableDecoupler(symIntegratedDecoupler, symCrossfeedToggleModule);
 
-            SetEvents(symIntegratedDecoupler.decouplerModule, symCrossfeedToggleModule);
+            SetEvents(integratedDecoupler, symIntegratedDecoupler.decouplerModule, symCrossfeedToggleModule);
         }
 
         void SetAllStatus(bool b, bool inEditorModified = false, bool doSymmetry = true)
@@ -70,9 +138,9 @@ namespace IntegratedStackedTankDecouplers
             //integratedDecoupler = b;
             Log.Info("lcnt: " + lcnt + ",   SetStatus: " + b);
             
-            for (int i = 0; i < toInitialize.Count; i++)
+            for (int i = 0; i < partsInSymmetry.Count; i++)
             { 
-                IntegratedDecoupler symIntegratedDecoupler = toInitialize[i];
+                IntegratedDecoupler symIntegratedDecoupler = partsInSymmetry[i];
                 SetStatus(b, symIntegratedDecoupler);     
             }
             
@@ -83,20 +151,7 @@ namespace IntegratedStackedTankDecouplers
             Log.Info("SetStatus 1");
         }
 
-        void SetEvents(ModuleDecouple decouplerModule, ModuleToggleCrossfeed crossfeedToggleModule)
-        {
-            crossfeedToggleModule.Events["ToggleEvent"].guiActive = false;
-            crossfeedToggleModule.Events["ToggleEvent"].active = false;
-            crossfeedToggleModule.Actions["ToggleAction"].active = false;
-            crossfeedToggleModule.Actions["EnableAction"].active = false;
-            crossfeedToggleModule.Actions["DisableAction"].active = false;
 
-            if (decouplerModule != null)
-                decouplerModule.part.UpdateStageability(true, true);
-            else
-                Log.Error("No ModuleDecouple to update");
-
-        }
         void enableDecoupler(IntegratedDecoupler id, ModuleToggleCrossfeed crossfeedToggleModule)
         {
             Log.Info("lcnt: " + lcnt +  "  enableDecoupler");
@@ -114,6 +169,7 @@ namespace IntegratedStackedTankDecouplers
 
                 // if (decouplerModule.part != null)
                 id.pmEvents["ToggleIntegratedDecoupler"].guiName = "Integrated Decoupler";
+                id.decouplerModule.Events["ToggleStaging"].guiActiveEditor = true;
             }
         }
 
@@ -145,100 +201,34 @@ namespace IntegratedStackedTankDecouplers
 
                 //if (decouplerModule.part != null  && decouplerModule.part.Events != null)
                 id.pmEvents["ToggleIntegratedDecoupler"].guiName = "No decoupler";
+                id.decouplerModule.Events["ToggleStaging"].guiActiveEditor = false;
 
             }
         }
 
-        ModuleDecouple decouplerModule = null;
-        PartModule decouplerPartModule = null;
-        ModuleToggleCrossfeed crossfeedToggleModule = null;
-
-        bool techAvailable
+        void SetEvents(bool status, ModuleDecouple decouplerModule, ModuleToggleCrossfeed crossfeedToggleModule)
         {
-            get
-            {
-                var b = true;
-                if (this.DecouplerRequiresTech())
-                    b = this.DecouplerHasTech();
-                return b;
-            }
-        }
+            crossfeedToggleModule.Events["ToggleEvent"].guiActive = status;
+            crossfeedToggleModule.Events["ToggleEvent"].active = status;
+            crossfeedToggleModule.Actions["ToggleAction"].active = status;
+            crossfeedToggleModule.Actions["EnableAction"].active = status;
+            crossfeedToggleModule.Actions["DisableAction"].active = status;
 
-        AttachNode GetNode(string nodeId, Part p)
-        {
-            foreach (var attachNode in p.attachNodes.Where(an => an != null))
-            {
-                if (p.srfAttachNode != null && attachNode == p.srfAttachNode)
-                    continue;
-                if (attachNode.id == nodeId)
-                    return attachNode;
-
-            }
-            return null;
-        }
-
-
-        public override void OnStart(StartState state)
-        {
-            Log.Info("IntegratedDecoupler.OnStart");
-            base.OnStart(state);
-            //topNodeChecked = false;
-
-            lcnt = ++cnt;
-
-  
-
-            topNode = GetNode("top", part);
-            if (topNode == null)
-            {
-                topNode01 = GetNode("top01", part);
-                if (topNode01 != null)
-                    topNode02 = GetNode("top02", part);
-            }
-
-            GameEvents.onEditorShipModified.Add(onEditorShipModified);
-            GameEvents.onEditorPartPlaced.Add(onEditorPartPlaced);
-
-        }
-
-       // bool isOnEditorShipModified = false;
-
-        private void onEditorPartPlaced(Part part)
-        {
-            if (part == null || part != this.part) return;
-            Log.Info("onEditorPartPlaced, lcnt: " + lcnt);
-
-            decouplerModule = this.part.FindModuleImplementing<ModuleDecouple>();
-            decouplerPartModule = decouplerModule;
-
-            crossfeedToggleModule = this.part.FindModuleImplementing<ModuleToggleCrossfeed>();
-
-            ModuleJettison moduleJettison = this.part.FindModuleImplementing<ModuleJettison>();
-            pmEvents = Events;
-
-            if (decouplerModule == null)
-                Log.Info("ModuleDecouple NOT found");
+#if false
+            if (decouplerModule != null &&
+                (topNode != null || topNode01 != null || topNode02 != null))
+                decouplerModule.part.UpdateStageability(true, true);
             else
-                Log.Info("ModuleDecouple found");
+                Log.Error("No ModuleDecouple to update");
+#endif
+        }
 
-            // Collect a list of modules to initialize from the part and all its children.
-            toInitialize.Clear();
-            toInitialize.Add(this);
-            CollectToInitializerList(part, toInitialize);
 
-            // Also any symmetry counterparts it may have, and *their* children.
-            if (part.symmetryCounterparts != null)
-            {
-                for (int i = 0; i < part.symmetryCounterparts.Count; ++i)
-                {
-                    Part counterpart = part.symmetryCounterparts[i];
-                    if (!ReferenceEquals(this, counterpart)) // probably unnecessary
-                    {
-                        CollectToInitializerList(counterpart, toInitialize);
-                    }
-                }
-            }
-            Log.Info("onEditorPartPlaced.toInitialize.Count: " + toInitialize.Count);
+
+
+        void OnEditorAttach()
+        {
+            Log.Info("lcnt: " + lcnt + ", OnEditorAttach");
             if (!techAvailable) // || moduleJettison != null
             {
                 this.Events["ToggleIntegratedDecoupler"].guiActiveEditor = false;
@@ -246,50 +236,20 @@ namespace IntegratedStackedTankDecouplers
                 Log.Info("Disabling IntegratedDecoupler due to no tech");
 
                 SetStatus(false, this);
- 
+
                 return;
             }
+            GetSymList();
             Log.Info("lcnt: " + lcnt + ",  Doing initial SetStatus");
             SetStatus(false, this);
             lastTopNodeAttachedPart = null;
 
             EditorLogic.fetch.SetBackup();
-
-
-            Log.Info("OnEditorPartPlaced, lcnt: " + lcnt + ",  toInitialize.Count: " + toInitialize.Count);
-        }
-
-        /// <summary>
-        /// Scan the provided part and all its children recursively, looking for any of them that have
-        /// a ModuleVesselCategorizer.  Add any found modules to the list.
-        /// </summary>
-        /// <param name="root"></param>
-        /// <param name="toInitialize"></param>
-        private static void CollectToInitializerList(Part root, List<IntegratedDecoupler> toInitialize)
-        {
-            if (root == null) return;
-
-            for (int i = 0; i < root.symmetryCounterparts.Count; ++i)
-            {
-                Part counterpart = root.symmetryCounterparts[i];
-                if (!ReferenceEquals(root, counterpart))
-                {
-                    IntegratedDecoupler symIntegratedDecoupler = counterpart.FindModuleImplementing<IntegratedDecoupler>();
-                    if (!toInitialize.Contains(symIntegratedDecoupler))
-                        toInitialize.Add(symIntegratedDecoupler);
-#if false
-                    if (root.children == null) return;
-                    for (int i1 = 0; i1 < root.children.Count; ++i1)
-                    {
-                        CollectToInitializerList(root.children[i1], toInitialize);
-                    }
-#endif
-                }
-            }
         }
 
 
-        void CheckIfModified()
+
+        void CheckIfAttachedToEngine()
         {
             Log.Info("lcnt: " + lcnt + ",  CheckIfModified");
             Part attachedPart = null;
@@ -380,6 +340,10 @@ namespace IntegratedStackedTankDecouplers
 
         }
 
+        /// <summary>
+        /// Called when ship is modified, checks to see if this part is modified
+        /// </summary>
+        /// <param name="s"></param>
         void onEditorShipModified(ShipConstruct s)
         {
             //Log.Info("onEditorShipModified 1, lcnt: " + lcnt );
@@ -387,20 +351,20 @@ namespace IntegratedStackedTankDecouplers
             // if (isOnEditorShipModified)
             //     return;
             // isOnEditorShipModified = true;
-            if (toInitialize.Count == 0)
+            if (partsInSymmetry.Count == 0)
                 return;
 
 
-            Log.Info("onEditorShipModified 2, lcnt: " + lcnt + ",   toInitialize.Count: " + toInitialize.Count);
+            Log.Info("onEditorShipModified 2, lcnt: " + lcnt + ",   toInitialize.Count: " + partsInSymmetry.Count);
 
 
             if (topNode != null || topNode01 != null || topNode02 != null)
             {
                 Log.Info("top attach node found, lcnt: " + lcnt);
 
-                for (int i = 0; i < toInitialize.Count; i++)
+                for (int i = 0; i < partsInSymmetry.Count; i++)
                 {
-                    toInitialize[i].CheckIfModified();
+                    partsInSymmetry[i].CheckIfAttachedToEngine();
                 }
 
             }
@@ -412,47 +376,7 @@ namespace IntegratedStackedTankDecouplers
         private void OnDestroy()
         {
             GameEvents.onEditorShipModified.Remove(onEditorShipModified);
-            GameEvents.onEditorPartPlaced.Remove(onEditorPartPlaced);
-        }
-
-        public override string GetInfo()
-        {
-            // need to add code here
-            Log.Info("GetInfo");
-            string s = "";
-            //if (techAvailable)
-            {
-                s = string.Format("Optional built-in decoupler\nOptional built-in Sepratrons");
-            }
-            Log.Info("GetInfo returning: " + s);
-            return s;
-        }
-
-        public float GetModuleMass(float m, ModifierStagingSituation mss)
-        {
-            if (integratedDecoupler)
-            {
-                return decouplerMass;
-            }
-            return 0;
-        }
-        public ModifierChangeWhen GetModuleMassChangeWhen()
-        {
-            return ModifierChangeWhen.CONSTANTLY;
-        }
-
-        public float GetModuleCost(float m, ModifierStagingSituation mss)
-        {
-            if (integratedDecoupler)
-            {
-                return decouplerCost;
-            }
-            return 0;
-        }
-        public ModifierChangeWhen GetModuleCostChangeWhen()
-        {
-            return ModifierChangeWhen.FIXED;
-
+            //GameEvents.onEditorPartPlaced.Remove(onEditorPartPlaced);
         }
 
         public bool DecouplerRequiresTech()

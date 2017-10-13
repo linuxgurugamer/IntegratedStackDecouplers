@@ -38,7 +38,9 @@
     <Compile Include="NodeControl.cs" />
     <Compile Include="IntegratedDecoupler.cs" />
     <Compile Include="Log.cs" />
+    <Compile Include="PartInfoMassCost.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
@@ -71,14 +73,20 @@
     <PostBuildEvent>
 start /D D:\Users\jbb\github\IntegratedStackDecouplers /WAIT deploy.bat  $(TargetDir) $(TargetFileName)
 
+
+
 if $(ConfigurationName) == Release (
+
 start /D D:\Users\jbb\github\IntegratedStackDecouplers /WAIT buildRelease.bat $(TargetDir) $(TargetFileName)
+
 )
 </PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
     <PreBuildEvent>
 set textTemplatingPath="%25ProgramFiles(x86)%25\Microsoft Visual Studio\2017\Community\Common7\IDE \texttransform.exe"
+
+
 
 %25textTemplatingPath%25 "$(ProjectDir)AssemblyVersion.tt"</PreBuildEvent>
   </PropertyGroup>
