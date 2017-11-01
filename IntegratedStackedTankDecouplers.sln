@@ -14,6 +14,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionIt
 		GameData\IntegratedStackDecouplers\MMpatches\IntegratedStackDecouplers.cfg = GameData\IntegratedStackDecouplers\MMpatches\IntegratedStackDecouplers.cfg
 		IntegratedStackDecouplers.version = IntegratedStackDecouplers.version
 		License.txt = License.txt
+		GameData\IntegratedStackDecouplers\MMpatches\RadialCrossFeedControl.cfg = GameData\IntegratedStackDecouplers\MMpatches\RadialCrossFeedControl.cfg
 		README.md = README.md
 		TODO.txt = TODO.txt
 	EndProjectSection

@@ -9,3 +9,10 @@
 
 0.1.2.1
 	Fixed .version file
+
+0.1.2.2
+	Fixed symmetry code
+
+0.1.3
+	Really fixed the decoupler code :-)
+	Added RadialCrossFeedcontrol

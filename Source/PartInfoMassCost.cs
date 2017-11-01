@@ -23,7 +23,7 @@ namespace IntegratedStackedTankDecouplers
 
         public float GetModuleMass(float m, ModifierStagingSituation mss)
         {
-            if (integratedDecoupler)
+            if (integratedDecoupler != DecouplerType.none)
             {
                 return decouplerMass;
             }
@@ -36,7 +36,7 @@ namespace IntegratedStackedTankDecouplers
 
         public float GetModuleCost(float m, ModifierStagingSituation mss)
         {
-            if (integratedDecoupler)
+            if (integratedDecoupler != DecouplerType.none)
             {
                 return decouplerCost;
             }

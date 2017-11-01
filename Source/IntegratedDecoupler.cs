@@ -10,26 +10,24 @@ namespace IntegratedStackedTankDecouplers
 {
     public partial class IntegratedDecoupler : ModuleToggleCrossfeed
     {
-        static int cnt = 0;
-
-#if DEBUG
-        [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = true)]
-#endif
-        int lcnt = -1;
-
         List<IntegratedDecoupler> partsInSymmetry = new List<IntegratedDecoupler>();
 
         [KSPField(isPersistant = true, guiActiveEditor = false, guiActive = false)]
         public bool initialized = false;
 
+        public enum DecouplerType { none, Enabled, EnabledStagingDisabled }
+
         [KSPField(isPersistant = true, guiActiveEditor = false, guiActive = false)]
-        public bool integratedDecoupler = false;
+        //public bool integratedDecoupler = false;
+        DecouplerType integratedDecoupler = DecouplerType.none;
 
         [KSPEvent(name = "integratedDecoupler", guiName = "No decoupler", guiActiveEditor = true, active = true)]
         public void ToggleIntegratedDecoupler()
         {
-            Log.Info("ToggleIntegratedDecoupler, lcnt: " + lcnt);
-            SetAllStatus(!integratedDecoupler);
+            integratedDecoupler++;
+            if (integratedDecoupler > DecouplerType.EnabledStagingDisabled)
+                integratedDecoupler = DecouplerType.none;
+            SetAllStatus(integratedDecoupler);
         }
 
         [KSPField(isPersistant = true, guiActive = false, guiActiveEditor = false)]
@@ -54,14 +52,27 @@ namespace IntegratedStackedTankDecouplers
         ModuleToggleCrossfeed crossfeedToggleModule = null;
 
 
-
+        void SetToggleName(BaseEventList pmEvents)
+        {
+            switch (integratedDecoupler)
+            {
+                case DecouplerType.none:
+                    pmEvents["ToggleIntegratedDecoupler"].guiName = "No decoupler";
+                    break;
+                case DecouplerType.Enabled:
+                    pmEvents["ToggleIntegratedDecoupler"].guiName = "Integrated Decoupler";
+                    break;
+                case DecouplerType.EnabledStagingDisabled:
+                    pmEvents["ToggleIntegratedDecoupler"].guiName = "Integrated Decoupler, staging disabled";
+                    break;
+                
+            }
+        }
 
         public override void OnStart(StartState state)
         {
-            Log.Info("lcnt: " + lcnt + ",  IntegratedDecoupler.OnStart");
             base.OnStart(state);
             //topNodeChecked = false;
-            lcnt = ++cnt;
 
             topNode = GetNode("top", part);
             if (topNode == null)
@@ -85,16 +96,19 @@ namespace IntegratedStackedTankDecouplers
                 {
                     KSPActionParam kap = null;
                     crossfeedToggleModule.EnableAction(kap);
-                    SetEvents(false, decouplerModule, crossfeedToggleModule);
+                    SetEvents(DecouplerType.none, decouplerModule, crossfeedToggleModule);
 
                 }
             }
             else
             {
-                if (integratedDecoupler)
+                decouplerModule.Events["ToggleStaging"].guiActiveEditor = false;
+
+                SetToggleName(pmEvents);
+                if (integratedDecoupler != DecouplerType.none)
                 {
-                    pmEvents["ToggleIntegratedDecoupler"].guiName = "Integrated Decoupler";
-                    decouplerModule.Events["ToggleStaging"].guiActiveEditor = true;
+                    //pmEvents["ToggleIntegratedDecoupler"].guiName = "Integrated Decoupler";
+                   // decouplerModule.Events["ToggleStaging"].guiActiveEditor = true;
                 }
                 else
                 {
@@ -104,7 +118,7 @@ namespace IntegratedStackedTankDecouplers
                     {
                         KSPActionParam kap = null;
                         crossfeedToggleModule.EnableAction(kap);
-                        SetEvents(false, decouplerModule, crossfeedToggleModule);
+                        SetEvents(DecouplerType.none, decouplerModule, crossfeedToggleModule);
 
                     }
                 }
@@ -118,35 +132,32 @@ namespace IntegratedStackedTankDecouplers
         /// </summary>
         /// <param name="status"></param>
         /// <param name="symIntegratedDecoupler"></param>
-        void SetStatus(bool status, IntegratedDecoupler symIntegratedDecoupler)
+        void SetStatus(DecouplerType status, IntegratedDecoupler symIntegratedDecoupler)
         {
             Part counterpart = symIntegratedDecoupler.part;
 
             ModuleToggleCrossfeed symCrossfeedToggleModule = counterpart.FindModuleImplementing<ModuleToggleCrossfeed>();
 
             symIntegratedDecoupler.integratedDecoupler = status;
-            if (integratedDecoupler)
+            if (integratedDecoupler != DecouplerType.none)
                 enableDecoupler(symIntegratedDecoupler, symCrossfeedToggleModule);
             else
                 disableDecoupler(symIntegratedDecoupler, symCrossfeedToggleModule);
 
-            SetEvents(integratedDecoupler, symIntegratedDecoupler.decouplerModule, symCrossfeedToggleModule);
+            SetEvents(status, symIntegratedDecoupler.decouplerModule, symCrossfeedToggleModule);
         }
 
-        void SetAllStatus(bool b, bool inEditorModified = false, bool doSymmetry = true)
-        {
-            //integratedDecoupler = b;
-            Log.Info("lcnt: " + lcnt + ",   SetStatus: " + b);
-            
+        void SetAllStatus(DecouplerType decouplerType, bool inEditorModified = false, bool doSymmetry = true)
+        {            
             for (int i = 0; i < partsInSymmetry.Count; i++)
             { 
                 IntegratedDecoupler symIntegratedDecoupler = partsInSymmetry[i];
-                SetStatus(b, symIntegratedDecoupler);     
+                SetStatus(decouplerType, symIntegratedDecoupler);     
             }
             
 
             Log.Info("SetStatus 1");
-            if (!inEditorModified)
+            //if (!inEditorModified)
                 GameEvents.onEditorShipModified.Fire(EditorLogic.fetch.ship);
             Log.Info("SetStatus 1");
         }
@@ -154,7 +165,6 @@ namespace IntegratedStackedTankDecouplers
 
         void enableDecoupler(IntegratedDecoupler id, ModuleToggleCrossfeed crossfeedToggleModule)
         {
-            Log.Info("lcnt: " + lcnt +  "  enableDecoupler");
             KSPActionParam kap = null;
             base.enabled = true;
             if (id.decouplerModule != null)
@@ -163,19 +173,26 @@ namespace IntegratedStackedTankDecouplers
                 id.decouplerModule.Events["ToggleStaging"].guiActiveEditor = true; // Only seen when AdvancedTweakables is enabled
                 id.decouplerModule.Fields["ejectionForcePercent"].guiActiveEditor = true;
                 id.decouplerModule.enabled = true;
-                id.decouplerModule.stagingEnabled = true;
+                //id.decouplerModule.stagingEnabled = true;
+                if (integratedDecoupler == DecouplerType.Enabled)
+                    id.decouplerModule.SetStaging(true);
+                else
+                    id.decouplerModule.SetStaging(false);
                 if (crossfeedToggleModule != null)
                     crossfeedToggleModule.DisableAction(kap);
 
                 // if (decouplerModule.part != null)
-                id.pmEvents["ToggleIntegratedDecoupler"].guiName = "Integrated Decoupler";
+                SetToggleName(id.pmEvents);
+                //id.pmEvents["ToggleIntegratedDecoupler"].guiName = "Integrated Decoupler";
                 id.decouplerModule.Events["ToggleStaging"].guiActiveEditor = true;
+                id.decouplerModule.Events["ToggleStaging"].guiActiveEditor = false;
+                id.part.UpdateStageability(true, true);
+
             }
         }
 
         void disableDecoupler(IntegratedDecoupler id, ModuleToggleCrossfeed crossfeedToggleModule)
         {
-            Log.Info("lcnt: " + lcnt + "  disableDecoupler");
             KSPActionParam kap = null;
 
             if (id.decouplerModule != null)
@@ -184,7 +201,8 @@ namespace IntegratedStackedTankDecouplers
                 id.decouplerModule.Events["ToggleStaging"].guiActiveEditor = false; // Only seen when AdvancedTweakables is enabled
                 id.decouplerModule.Fields["ejectionForcePercent"].guiActiveEditor = false;
                 id.decouplerModule.enabled = false;
-                id.decouplerModule.stagingEnabled = false;
+                //id.decouplerModule.stagingEnabled = false;
+                id.SetStaging(false);
 
                 if (part != null && part.Modules != null)
                     foreach (PartModule m in part.Modules)
@@ -200,20 +218,23 @@ namespace IntegratedStackedTankDecouplers
                     crossfeedToggleModule.EnableAction(kap);
 
                 //if (decouplerModule.part != null  && decouplerModule.part.Events != null)
-                id.pmEvents["ToggleIntegratedDecoupler"].guiName = "No decoupler";
+                //id.pmEvents["ToggleIntegratedDecoupler"].guiName = "No decoupler";
+                SetToggleName(id.pmEvents);
                 id.decouplerModule.Events["ToggleStaging"].guiActiveEditor = false;
-
+                id.part.UpdateStageability(true, true);
             }
         }
 
-        void SetEvents(bool status, ModuleDecouple decouplerModule, ModuleToggleCrossfeed crossfeedToggleModule)
+        void SetEvents(DecouplerType decouplerType, ModuleDecouple decouplerModule, ModuleToggleCrossfeed crossfeedToggleModule)
         {
+            bool status = (decouplerType != DecouplerType.none);
             crossfeedToggleModule.Events["ToggleEvent"].guiActive = status;
             crossfeedToggleModule.Events["ToggleEvent"].active = status;
             crossfeedToggleModule.Actions["ToggleAction"].active = status;
             crossfeedToggleModule.Actions["EnableAction"].active = status;
             crossfeedToggleModule.Actions["DisableAction"].active = status;
 
+            //crossfeedToggleModule.Actions["ToggleStaging"].active = false;
 #if false
             if (decouplerModule != null &&
                 (topNode != null || topNode01 != null || topNode02 != null))
@@ -228,20 +249,18 @@ namespace IntegratedStackedTankDecouplers
 
         void OnEditorAttach()
         {
-            Log.Info("lcnt: " + lcnt + ", OnEditorAttach");
             if (!techAvailable) // || moduleJettison != null
             {
                 this.Events["ToggleIntegratedDecoupler"].guiActiveEditor = false;
                 // this.Fields["seperatronCnt"].guiActiveEditor = false;
                 Log.Info("Disabling IntegratedDecoupler due to no tech");
 
-                SetStatus(false, this);
+                SetStatus(DecouplerType.none, this);
 
                 return;
             }
             GetSymList();
-            Log.Info("lcnt: " + lcnt + ",  Doing initial SetStatus");
-            SetStatus(false, this);
+            SetStatus(DecouplerType.none, this);
             lastTopNodeAttachedPart = null;
 
             EditorLogic.fetch.SetBackup();
@@ -251,23 +270,19 @@ namespace IntegratedStackedTankDecouplers
 
         void CheckIfAttachedToEngine()
         {
-            Log.Info("lcnt: " + lcnt + ",  CheckIfModified");
             Part attachedPart = null;
             if (topNode != null && topNode.attachedPart != null)
             {
-                Log.Info("lcnt: " + lcnt + " part attached to node: " + topNode.attachedPart.partInfo.name);
                 attachedPart = topNode.attachedPart;
             }
             else
             {
                 if (topNode01 != null && topNode01.attachedPart != null)
                 {
-                    Log.Info("lcnt: " + lcnt + " part attached to node01: " + topNode01.attachedPart.partInfo.name);
                     attachedPart = topNode01.attachedPart;
                 }
                 if (topNode02 != null && topNode02.attachedPart != null)
                 {
-                    Log.Info("lcnt: " + lcnt + " part attached to node: " + topNode.attachedPart.partInfo.name);
                     attachedPart = topNode02.attachedPart;
                 }
             }
@@ -279,8 +294,8 @@ namespace IntegratedStackedTankDecouplers
 
                 if (lastTopNodeAttachedPart != attachedPart)
                 {
-                    Log.Info("lcnt: " + lcnt + ",   lastTopNodeAttachedPart != attachedPart, setting status true");
-                    SetStatus(true, this);
+                    Log.Info("lastTopNodeAttachedPart != attachedPart, setting status true");
+                    SetStatus(DecouplerType.none, this);
                 }
 
                 AttachNode bottomNode = null;
@@ -312,28 +327,26 @@ namespace IntegratedStackedTankDecouplers
 
                 if (part != bottomNodeAttachedPart)
                 {
-                    Log.Info("lcnt: " + lcnt + "   Top node not attached to bottom node of engine");
-                    ScreenMessages.PostScreenMessage(lcnt + "Top node not attached to bottom node of engine", 3f, ScreenMessageStyle.UPPER_CENTER);
+                    ScreenMessages.PostScreenMessage("Top node not attached to bottom node of engine", 3f, ScreenMessageStyle.UPPER_CENTER);
 
-                    SetStatus(false, this);
+                    SetStatus(DecouplerType.none, this);
                     Events["ToggleIntegratedDecoupler"].guiActiveEditor = false;
                 }
                 else
                 {
                     //SetStatus(true, this);
-                    Log.Info("lcnt: " + lcnt + "   Top node is attached to bottom node of engine");
                     Events["ToggleIntegratedDecoupler"].guiActiveEditor = true;
                 }
                 lastTopNodeAttachedPart = attachedPart;
             }
             else
             {
-                Log.Info("lcnt: " + lcnt + "  No engine detected attached to top node");
+                Log.Info("  No engine detected attached to top node");
                 Events["ToggleIntegratedDecoupler"].guiActiveEditor = true;
                 if (attachedPart != null)
                 {
                     if (lastTopNodeAttachedPart != null && lastTopNodeAttachedPart != attachedPart)
-                        SetStatus(false, this);
+                        SetStatus(DecouplerType.none, this);
                     lastTopNodeAttachedPart = attachedPart;
                 }
             }
@@ -355,12 +368,12 @@ namespace IntegratedStackedTankDecouplers
                 return;
 
 
-            Log.Info("onEditorShipModified 2, lcnt: " + lcnt + ",   toInitialize.Count: " + partsInSymmetry.Count);
+            Log.Info("onEditorShipModified 2,   toInitialize.Count: " + partsInSymmetry.Count);
 
 
             if (topNode != null || topNode01 != null || topNode02 != null)
             {
-                Log.Info("top attach node found, lcnt: " + lcnt);
+                Log.Info("top attach node found" );
 
                 for (int i = 0; i < partsInSymmetry.Count; i++)
                 {

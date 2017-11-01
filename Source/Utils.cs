@@ -73,7 +73,7 @@ namespace IntegratedStackedTankDecouplers
 
         /// <summary>
         /// Scan the provided part and all its children recursively, looking for any of them that have
-        /// a ModuleVesselCategorizer.  Add any found modules to the list.
+        /// a IntegratedDecoupler.  Add any found modules to the list.
         /// </summary>
         /// <param name="root"></param>
         /// <param name="toInitialize"></param>
