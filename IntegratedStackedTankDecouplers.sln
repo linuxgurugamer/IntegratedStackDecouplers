@@ -13,6 +13,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionIt
 		deploy.bat = deploy.bat
 		GameData\IntegratedStackDecouplers\MMpatches\IntegratedStackDecouplers.cfg = GameData\IntegratedStackDecouplers\MMpatches\IntegratedStackDecouplers.cfg
 		IntegratedStackDecouplers.version = IntegratedStackDecouplers.version
+		jenkins.txt = jenkins.txt
 		License.txt = License.txt
 		GameData\IntegratedStackDecouplers\MMpatches\RadialCrossFeedControl.cfg = GameData\IntegratedStackDecouplers\MMpatches\RadialCrossFeedControl.cfg
 		README.md = README.md
