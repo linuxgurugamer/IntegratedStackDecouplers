@@ -13,9 +13,9 @@ namespace IntegratedStackedTankDecouplers
         List<RadialCrossFeedControl> radialSymParts = new List<RadialCrossFeedControl>();
 
         [KSPField(isPersistant = true)]
-        public FuelFlowtype CrossfeedType;
+        public FuelFlowtype CrossfeedType = FuelFlowtype.none;
 
-        FuelFlowtype defaultCrossfeedType;
+        FuelFlowtype defaultCrossfeedType = FuelFlowtype.none;
 
         [KSPEvent(name = "ToggleBiDirectional", guiName = "Crossfeed disabled", guiActiveEditor = true, active = true)]
         public void ToggleBiDirectional()
