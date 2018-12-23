@@ -23,6 +23,5 @@
 0.1.3.2
 	Version bump for 1.5 rebuild
 
-0.1.3.3
-	Fixed issue with crossfeed
+0.1.3.3 (unreleased)
 	Removed max version from .version file

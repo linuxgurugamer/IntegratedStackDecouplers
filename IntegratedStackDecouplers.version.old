@@ -1,7 +1,7 @@
 {
   "NAME": "IntegratedStackDecouplers",
   "URL": "http://ksp.spacetux.net/avc/IntegratedStackDecouplers",
-  "DOWNLOAD": "https://github.com/linuxgurugamer/IntegratedStackDecouplers/releases",
+    "DOWNLOAD": "https://github.com/linuxgurugamer/IntegratedStackDecouplers/releases",
   "GITHUB": {
     "USERNAME": "linuxgurugamer",
     "REPOSITORY": "IntegratedStackDecouplers"

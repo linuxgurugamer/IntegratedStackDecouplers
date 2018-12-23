@@ -126,7 +126,7 @@ namespace IntegratedStackedTankDecouplers
             GetSymList();
             defaultCrossfeedType = CrossfeedType;
             SetCrossfeedType(CrossfeedType);
-            Log.Info("zAwake, CrossfeedType: " + CrossfeedType + "   crossfeedToggleModule.crossfeedStatus: " + crossfeedToggleModule.crossfeedStatus);
+            //Log.Info("zAwake, CrossfeedType: " + CrossfeedType + "   crossfeedToggleModule.crossfeedStatus: " + crossfeedToggleModule.crossfeedStatus);
         }
 
         private void OnDestroy()
