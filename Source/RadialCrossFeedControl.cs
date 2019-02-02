@@ -15,6 +15,9 @@ namespace IntegratedStackedTankDecouplers
         [KSPField(isPersistant = true)]
         public FuelFlowtype CrossfeedType = FuelFlowtype.none;
 
+        [KSPField(isPersistant = true)]
+        bool isActive = false;
+
         FuelFlowtype defaultCrossfeedType = FuelFlowtype.none;
 
         [KSPEvent(name = "ToggleBiDirectional", guiName = "Crossfeed disabled", guiActiveEditor = true, active = true)]
@@ -91,6 +94,16 @@ namespace IntegratedStackedTankDecouplers
         {
 
             crossfeedToggleModule = part.FindModuleImplementing<ModuleToggleCrossfeed>();
+            if (crossfeedToggleModule == null)
+            {
+                Log.Info("Missing ModuleToggleCrossfeed in part: " + this.part.partInfo.title);
+
+                Events["ToggleBiDirectional"].active = false;
+                Events["ToggleBiDirectional"].guiActive = false;
+                Events["ToggleBiDirectional"].guiActiveEditor = false;
+                return;
+            }
+            isActive = true;
             if (crossfeedToggleModule.crossfeedStatus)
                 crossfeedToggleModule.ToggleEvent();
             GameEvents.onEditorShipModified.Add(onEditorShipModified);
@@ -131,6 +144,8 @@ namespace IntegratedStackedTankDecouplers
 
         private void OnDestroy()
         {
+            if (!isActive)
+                return;
             GameEvents.onEditorShipModified.Remove(onEditorShipModified);
             GameEvents.onVesselWasModified.Remove(onVesselWasModified);
         }
