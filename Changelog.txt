@@ -28,3 +28,7 @@
 
 0.1.3.5
 	in RadialCrossFeedControl, added code to check for ModuleToggleCrossfeed, if it doesn't exist, then don't execute.  This needed because at least one if not more pods in the KSP Expansion has a MOduleAnchoredDecoupler without the ModuleToggleCrossfeed
+
+0.1.4
+	Version bump for 1.7.2
+	Updated AssemblyVersion.tt
