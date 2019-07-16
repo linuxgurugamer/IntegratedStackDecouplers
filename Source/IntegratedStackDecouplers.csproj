@@ -35,6 +35,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>AssemblyVersion.tt</DependentUpon>
     </Compile>
+    <Compile Include="InstallChecker.cs" />
     <Compile Include="NodeControl.cs" />
     <Compile Include="IntegratedDecoupler.cs" />
     <Compile Include="Log.cs" />
