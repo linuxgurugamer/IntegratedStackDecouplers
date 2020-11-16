@@ -36,30 +36,35 @@ namespace IntegratedStackedTankDecouplers
         void SetCrossfeedType(FuelFlowtype newCrossfeedType)
         {
             CrossfeedType = newCrossfeedType;
-            switch (newCrossfeedType)
+            if (crossfeedToggleModule != null)
             {
-                case FuelFlowtype.none:
-                    Events["ToggleBiDirectional"].guiName = "Crossfeed disabled";
-                    if (crossfeedToggleModule.crossfeedStatus)
-                        crossfeedToggleModule.ToggleEvent();
-                    //crossfeedToggleModule.defaultCrossfeedStatus = false;
+                switch (newCrossfeedType)
+                {
+                    case FuelFlowtype.none:
+                        Events["ToggleBiDirectional"].guiName = "Crossfeed disabled";
+                        if (crossfeedToggleModule.crossfeedStatus)
+                            crossfeedToggleModule.ToggleEvent();
+                        //crossfeedToggleModule.defaultCrossfeedStatus = false;
 
-                    break;
-                case FuelFlowtype.biDirectional:
-                    Events["ToggleBiDirectional"].guiName = "Bi-Directional Crossfeed";
-                    if (!crossfeedToggleModule.crossfeedStatus)
-                        crossfeedToggleModule.ToggleEvent();
-                    //crossfeedToggleModule.defaultCrossfeedStatus = true;
+                        break;
+                    case FuelFlowtype.biDirectional:
+                        Events["ToggleBiDirectional"].guiName = "Bi-Directional Crossfeed";
+                        if (!crossfeedToggleModule.crossfeedStatus)
+                            crossfeedToggleModule.ToggleEvent();
+                        //crossfeedToggleModule.defaultCrossfeedStatus = true;
 
-                    break;
-                case FuelFlowtype.uniDirectional:
-                    Events["ToggleBiDirectional"].guiName = "UniDirectional Crossfeed";
-                    if (!crossfeedToggleModule.crossfeedStatus)
-                        crossfeedToggleModule.ToggleEvent();
-                    //crossfeedToggleModule.defaultCrossfeedStatus = true;
+                        break;
+                    case FuelFlowtype.uniDirectional:
+                        Events["ToggleBiDirectional"].guiName = "UniDirectional Crossfeed";
+                        if (!crossfeedToggleModule.crossfeedStatus)
+                            crossfeedToggleModule.ToggleEvent();
+                        //crossfeedToggleModule.defaultCrossfeedStatus = true;
 
-                    break;
+                        break;
+                }
             }
+            //else
+            //    Log.Error("Part: " + this.part.partInfo.title + " missing crossfeedToggleModule");
         }
 
         Part observedPart = null;
@@ -267,7 +272,8 @@ namespace IntegratedStackedTankDecouplers
         {
             Log.Info("Initializing flight");
             zAwake();
-            Log.Info("initFlight, CrossfeedType: " + CrossfeedType + "   crossfeedToggleModule.crossfeedStatus: " + crossfeedToggleModule.crossfeedStatus);
+            if (crossfeedToggleModule != null)
+                Log.Info("initFlight, CrossfeedType: " + CrossfeedType + "   crossfeedToggleModule.crossfeedStatus: " + crossfeedToggleModule.crossfeedStatus);
             this.GetAvailableResourceIDs(this.part, true);
             partSet = new PartSet(hashPartSet);
 
