@@ -44,3 +44,8 @@ ChangeLog
 
 0.1.5.1
 	Added additional checks crossfeedToggleModule != null to avoid nullref
+
+0.1.5.2
+	Renamed DLL for CKAN compatibility
+	Added AssemblyFileVersion
+	Updated version file for 1.12
